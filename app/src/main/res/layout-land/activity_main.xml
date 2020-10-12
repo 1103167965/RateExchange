@@ -74,13 +74,4 @@
         android:layout_marginTop="10dp"
         android:onClick="getrate"
         android:text="getrate" />
-
-    <Button
-        android:id="@+id/button7"
-        android:layout_width="330dp"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="10dp"
-        android:onClick="showrate"
-        android:text="showrate" />
 </LinearLayout>

@@ -11,15 +11,22 @@ import android.nfc.Tag;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.PersistableBundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ListAdapter;
+import android.widget.ListView;
+import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
@@ -30,21 +37,22 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
     public static HashMap<String, Float> rate = new HashMap<>();
-
-    static Handler handler = new Handler() {
+    public static MainActivity ma;
+    Handler handler = new Handler() {
         @SuppressLint("HandlerLeak")
         @Override
         public void handleMessage(Message msg) {
             if (msg.what == 5) {
                 String str = (String) msg.obj;
                 //Log.i("TAG", str);
-                Pattern pattern = Pattern.compile(".*美元(.*?</td>){5}.*?<td>(.*?)</td>.*");//(\\D*)(\\d+)(.*)");
+               /* Pattern pattern = Pattern.compile(".*美元(.*?</td>){5}.*?<td>(.*?)</td>.*");//(\\D*)(\\d+)(.*)");
                 Matcher matcher = pattern.matcher(str);
                 if (matcher.matches())
                     rate.put("dollar", Float.parseFloat(matcher.group(2))/100);
@@ -55,7 +63,12 @@ public class MainActivity extends AppCompatActivity {
                 pattern = Pattern.compile(".*韩元(.*?</td>){5}.*?<td>(.*?)</td>.*");//(\\D*)(\\d+)(.*)");
                 matcher = pattern.matcher(str);
                 if (matcher.matches())
-                    rate.put("won", Float.parseFloat(matcher.group(2))/100);
+                    rate.put("won", Float.parseFloat(matcher.group(2))/100);*/
+                Document dt = Jsoup.parse(str);
+                rate.put("dollar", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(26).getElementsByTag("td").get(5).text())/100);
+                rate.put("euro", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(7).getElementsByTag("td").get(5).text())/100);
+                rate.put("won", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(13).getElementsByTag("td").get(5).text())/100);
+                Toast.makeText(ma, "获取汇率成功", Toast.LENGTH_SHORT).show();
             }
             super.handleMessage(msg);
         }
@@ -63,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ma=this;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         SharedPreferences sp = getSharedPreferences("myrate", Activity.MODE_PRIVATE);
@@ -73,42 +87,7 @@ public class MainActivity extends AppCompatActivity {
         rate.put("euro", sp.getFloat("euro", 0.1256f));
         rate.put("won", sp.getFloat("won", 171.3421f));
 
-        Thread t = new Thread(new Runnable() {
-            InputStream is = null;
-            BufferedReader br = null;
-            HttpURLConnection http = null;
 
-            @Override
-            public void run() {
-                try {
-                    URL url = new URL("http://www.usd-cny.com/bankofchina.htm");
-                    http = (HttpURLConnection) url.openConnection();
-                    is = http.getInputStream();
-                    br = new BufferedReader(new InputStreamReader(is, "gb2312"));
-                    StringBuffer sb = new StringBuffer();
-                    String rl = br.readLine();
-                    while (rl != null) {
-                        sb.append(rl);
-                        rl = br.readLine();
-                    }
-                    handler.sendMessage(handler.obtainMessage(5, new String(sb.toString().getBytes("UTF-8"),"UTF-8")));
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    try {
-                        if (br != null) br.close();
-                        if (is != null) is.close();
-                        if (http != null) http.disconnect();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-            }
-        });
-        t.start();
 
     }
 
@@ -146,7 +125,47 @@ public class MainActivity extends AppCompatActivity {
             ed.putFloat("euro", data.getFloatExtra("euro", 0f));
             ed.putFloat("won", data.getFloatExtra("won", 0f));
             ed.apply();
+
         }
+    }
+
+    public void getrate(View view) {
+        Thread t = new Thread(new Runnable() {
+            InputStream is = null;
+            BufferedReader br = null;
+            HttpURLConnection http = null;
+
+            @Override
+            public void run() {
+                try {
+                    URL url = new URL("https://www.usd-cny.com/bankofchina.htm");
+                    http = (HttpURLConnection) url.openConnection();
+                    is = http.getInputStream();
+                    br = new BufferedReader(new InputStreamReader(is, "gb2312"));
+                    StringBuffer sb = new StringBuffer();
+                    String rl = br.readLine();
+                    while (rl != null) {
+                        sb.append(rl);
+                        rl = br.readLine();
+                    }
+                    handler.sendMessage(handler.obtainMessage(5, sb.toString()));
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        if (br != null) br.close();
+                        if (is != null) is.close();
+                        if (http != null) http.disconnect();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+        });
+        t.start();
     }
 
     /*@Override
@@ -159,4 +178,18 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         return super.onOptionsItemSelected(item);
     }*/
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState, @NonNull PersistableBundle outPersistentState) {
+        super.onSaveInstanceState(outState, outPersistentState);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+    }
+
+    public void showrate(View view) {
+        startActivity(new Intent(this, RateListActivity.class));
+    }
 }
