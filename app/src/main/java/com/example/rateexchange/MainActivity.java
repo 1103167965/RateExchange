@@ -37,7 +37,10 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -45,6 +48,7 @@ import java.util.regex.Pattern;
 public class MainActivity extends AppCompatActivity {
     public static HashMap<String, Float> rate = new HashMap<>();
     public static MainActivity ma;
+    public static String date;
     Handler handler = new Handler() {
         @SuppressLint("HandlerLeak")
         @Override
@@ -68,7 +72,15 @@ public class MainActivity extends AppCompatActivity {
                 rate.put("dollar", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(26).getElementsByTag("td").get(5).text())/100);
                 rate.put("euro", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(7).getElementsByTag("td").get(5).text())/100);
                 rate.put("won", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(13).getElementsByTag("td").get(5).text())/100);
+                date=new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
                 Toast.makeText(ma, "获取汇率成功", Toast.LENGTH_SHORT).show();
+                SharedPreferences sp = getSharedPreferences("myrate", Activity.MODE_PRIVATE);
+                SharedPreferences.Editor ed=sp.edit();
+                ed.putFloat("dollar", rate.get("dollar"));
+                ed.putFloat("euro", rate.get("euro"));
+                ed.putFloat("won", rate.get("won"));
+                ed.putString("date", date);
+                ed.apply();
             }
             super.handleMessage(msg);
         }
@@ -80,15 +92,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         SharedPreferences sp = getSharedPreferences("myrate", Activity.MODE_PRIVATE);
-        //PreferenceManager.getDefaultSharedPreferences(this);
-        //SharedPreferences.Editor ed=sp.edit();
-        //sp.contains();
+        if(sp.getString("date", "-").equalsIgnoreCase("-")){
+            date=new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
+        }else{
+            date=sp.getString("date", "-");
+        }
+        if(compareDate(date))
+            getrate();
         rate.put("dollar", sp.getFloat("dollar", 0.1477f));
         rate.put("euro", sp.getFloat("euro", 0.1256f));
         rate.put("won", sp.getFloat("won", 171.3421f));
-
-
-
     }
 
     public void open(View v) {
@@ -104,6 +117,8 @@ public class MainActivity extends AppCompatActivity {
         Pattern pattern = Pattern.compile("[0-9]+\\.?[0-9]*");
         Matcher matcher = pattern.matcher(et.getText());
         if (matcher.matches()) {
+            if(compareDate(date))
+                getrate();
             et.setText(String.valueOf(Float.parseFloat(matcher.group()) * rate.get(view.getTag().toString())));
         } else {
             Toast.makeText(this, "输入金额", Toast.LENGTH_SHORT).show();
@@ -124,12 +139,52 @@ public class MainActivity extends AppCompatActivity {
             ed.putFloat("dollar", data.getFloatExtra("dollar", 0f));
             ed.putFloat("euro", data.getFloatExtra("euro", 0f));
             ed.putFloat("won", data.getFloatExtra("won", 0f));
+            date=new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
+            ed.putString("date", date);
             ed.apply();
-
         }
     }
 
     public void getrate(View view) {
+        Thread t = new Thread(new Runnable() {
+            InputStream is = null;
+            BufferedReader br = null;
+            HttpURLConnection http = null;
+
+            @Override
+            public void run() {
+                try {
+                    URL url = new URL("https://www.usd-cny.com/bankofchina.htm");
+                    http = (HttpURLConnection) url.openConnection();
+                    is = http.getInputStream();
+                    br = new BufferedReader(new InputStreamReader(is, "gb2312"));
+                    StringBuffer sb = new StringBuffer();
+                    String rl = br.readLine();
+                    while (rl != null) {
+                        sb.append(rl);
+                        rl = br.readLine();
+                    }
+                    handler.sendMessage(handler.obtainMessage(5, sb.toString()));
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        if (br != null) br.close();
+                        if (is != null) is.close();
+                        if (http != null) http.disconnect();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+        });
+        t.start();
+    }
+
+    public void getrate() {
         Thread t = new Thread(new Runnable() {
             InputStream is = null;
             BufferedReader br = null;
@@ -191,5 +246,33 @@ public class MainActivity extends AppCompatActivity {
 
     public void showrate(View view) {
         startActivity(new Intent(this, RateListActivity.class));
+    }
+
+
+    public static boolean compareDate(String date2) {
+        String da1[] = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date()).split("-");
+        if (Integer.parseInt(da1[3]) < 8) {
+            Date beforeDay = getBeforeDay(new Date());
+            da1 = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(beforeDay).split("-");
+        }
+        da1[3] = "8";
+        da1[4] = "0";
+        da1[5] = "0";
+        String da2[] = date2.split("-");
+        for (int i = 0; i < da1.length; i++)
+            if (Integer.parseInt(da1[i]) > Integer.parseInt(da2[i]))
+                return true;
+            else if (Integer.parseInt(da1[i]) == Integer.parseInt(da2[i]))
+                continue;
+            else return false;
+        return false;
+    }
+
+    public static Date getBeforeDay(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.DAY_OF_MONTH, -1);
+        date = calendar.getTime();
+        return date;
     }
 }
