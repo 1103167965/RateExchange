@@ -7,6 +7,8 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.nfc.Tag;
 import android.os.Bundle;
 import android.os.Handler;
@@ -48,6 +50,8 @@ public class MainActivity extends AppCompatActivity {
     public static HashMap<String, Float> rate = new HashMap<>();
     public static HashMap<String, Float> money = new HashMap<>();
     public static MainActivity ma;
+    private DBHelper dbh;
+    private String TBNAME;
     Handler handler = new Handler() {
         @SuppressLint("HandlerLeak")
         @Override
@@ -68,14 +72,16 @@ public class MainActivity extends AppCompatActivity {
                 if (matcher.matches())
                     rate.put("won", Float.parseFloat(matcher.group(2))/100);*/
                 Document dt = Jsoup.parse(str);
-                rate.put("dollar", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(26).getElementsByTag("td").get(5).text())/100);
-                rate.put("euro", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(7).getElementsByTag("td").get(5).text())/100);
-                rate.put("won", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(13).getElementsByTag("td").get(5).text())/100);
-                Elements es=dt.getElementsByTag("table").get(0).getElementsByTag("tr");
-                for(int i=1;i<es.size();i++){
-                    Element e=es.get(i);
-                    money.put(e.getElementsByTag("td").get(0).text(),Float.parseFloat(e.getElementsByTag("td").get(5).text()));//+es.getElementsByTag("td").get(5).text());
+                rate.put("dollar", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(26).getElementsByTag("td").get(5).text()) / 100);
+                rate.put("euro", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(7).getElementsByTag("td").get(5).text()) / 100);
+                rate.put("won", Float.parseFloat(dt.getElementsByTag("table").get(0).getElementsByTag("tr").get(13).getElementsByTag("td").get(5).text()) / 100);
+                Elements es = dt.getElementsByTag("table").get(0).getElementsByTag("tr");
+                for (int i = 1; i < es.size(); i++) {
+                    Element e = es.get(i);
+                    money.put(e.getElementsByTag("td").get(0).text(), Float.parseFloat(e.getElementsByTag("td").get(5).text()));//+es.getElementsByTag("td").get(5).text());
                 }
+                dbh.add(money);
+                money = dbh.listAll();
                 Toast.makeText(ma, "获取汇率成功", Toast.LENGTH_SHORT).show();
             }
             super.handleMessage(msg);
@@ -84,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        ma=this;
+        ma = this;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         SharedPreferences sp = getSharedPreferences("myrate", Activity.MODE_PRIVATE);
@@ -95,6 +101,15 @@ public class MainActivity extends AppCompatActivity {
         rate.put("euro", sp.getFloat("euro", 0.1256f));
         rate.put("won", sp.getFloat("won", 171.3421f));
         getrate(null);
+
+/*        String query="select sqlite_version() AS sqlite_version";
+        SQLiteDatabase db=SQLiteDatabase.openOrCreateDatabase(":memory:",null);
+        Cursor cursor=db.rawQuery(query,null);
+        String sqliteVersion;
+        sqliteVersion=cursor.moveToNext()?cursor.getString(0):"";
+        Log.i("version::", sqliteVersion);"*/
+        dbh = new DBHelper(this);
+        dbh.listAll();
     }
 
     public void open(View v) {
@@ -174,16 +189,18 @@ public class MainActivity extends AppCompatActivity {
         t.start();
     }
 
-    /*@Override
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu,menu);
+        getMenuInflater().inflate(R.menu.menu, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        //item.getItemId();
+        startActivity(new Intent(this, settingsActivity.class));
         return super.onOptionsItemSelected(item);
-    }*/
+    }
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState, @NonNull PersistableBundle outPersistentState) {
@@ -197,5 +214,9 @@ public class MainActivity extends AppCompatActivity {
 
     public void showrate(View view) {
         startActivity(new Intent(this, RateListActivity.class));
+    }
+
+    public void fragment(View view) {
+        startActivity(new Intent(this, Fragmenttest.class));
     }
 }

@@ -1,3 +1,20 @@
 <resources>
     <string name="app_name">RateExchange</string>
+    <string name="settings_title">配置页面</string>
+
+    <!-- 控件标签 -->
+    <string name="set_switch1_label">开关项</string>
+    <string name="set_checkbox1_label">复选项</string>
+    <string name="set_list_label">列表项</string>
+    <string name="set_text1_label">选项1</string>
+    <string name="set_text2_label">选项2</string>
+    <string name="set_group1_label">分组1</string>
+    <string name="set_group2_label">分组2</string>
+
+    <!-- 控件ID -->
+    <string name="set_switch1_key">set_switch1</string>
+    <string name="set_checkbox1_key">set_checkbox1</string>
+    <string name="set_list_key">set_list</string>
+    <string name="set_text1_key">set_text1</string>
+    <string name="set_text2_key">set_text2</string>
 </resources>

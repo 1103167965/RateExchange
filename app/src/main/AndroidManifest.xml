@@ -20,5 +20,13 @@
         </activity>
         <activity android:name=".RateListActivity"/>
         <activity android:name=".calc_rate" />
+        <activity android:name=".Fragmenttest" />
+        <activity
+            android:name=".settingsActivity"
+            android:label="@string/settings_title">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.rateexchange.MainActivity" />
+        </activity>
     </application>
 </manifest>

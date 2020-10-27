@@ -83,4 +83,12 @@
         android:layout_marginTop="10dp"
         android:onClick="showrate"
         android:text="showrate" />
+
+    <Button
+        android:id="@+id/button8"
+        android:layout_width="330dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:onClick="fragment"
+        android:text="fragment" />
 </LinearLayout>

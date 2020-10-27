@@ -76,7 +76,6 @@ class myAdapter extends ArrayAdapter implements AdapterView.OnItemClickListener,
         title.setText("Title:" + map.get("title"));
         detail.setText("detail:" + map.get("detail"));
         return itemView;
-
     }
 
     String TAG="lalala:";
